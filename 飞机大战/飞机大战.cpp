@@ -1,13 +1,12 @@
 #include "JHMG engine.h"
 
 Game* mainGame;
-gameSound* sound;
 void sceneAwake();
 void playerUpdate(gameObject* self);
 void playerRevive();
 void PbulletUpdate(gameObject* self);
-void onTriggleEnter_Pbullet(gameObject* other);
-void onTriggleEnter_Ebullet(gameObject* other);
+void onTriggleEnter_Pbullet(gameObject* self,gameObject* other);
+void onTriggleEnter_Ebullet(gameObject* self, gameObject* other);
 void sceneUpdate();
 void createEnemy();
 void EbulletUpdate(gameObject* self);
@@ -27,6 +26,7 @@ int main()
 
 }
 
+//场景初始化
 void sceneAwake()
 {
 	//生成背景
@@ -41,17 +41,17 @@ void sceneAwake()
 	mainGame->getScene()->addGameUIText("score", scoreText);
 	mainGame->getScene()->setGameLoopFunc(sceneUpdate);
 	//生成背景音乐
-	sound = new gameSound();
-	sound->setSound(".\\res\\bgm.mp3");
-	sound->play(1);
+	mainGame->Sound.setSound(".\\res\\bgm.mp3");
+	mainGame->Sound.play(1);
+	mainGame->Sound.setVolume(100);
 }
 
+//生成敌人
 void createEnemy()
 {
 	//产生随机x坐标
 	srand(time(NULL) * rand());
 	int x = rand() % 800;
-	cout << x << endl;
 
 	gameObject* enemy = new gameObject(new jhObject2D::circle(45, jhVector2(x, 50)), ".\\res\\plane2.png", 85, 85, true);
 	enemy->tag = jhString("enemy");
@@ -59,17 +59,19 @@ void createEnemy()
 	mainGame->getScene()->addGameObject("enemy", enemy);
 }
 
+//场景更新
 void sceneUpdate()
 {
 	gameUIText* scoreText = mainGame->getScene()->getGameUIText("score");
 	scoreText->text = ("分数:" + to_string(score));
 	if (score < 0)
 	{
-		gameMessageBox("warning","游戏结束！").show();
+		gameMessageBox("warning", "游戏结束！").show();
 		exit(0);
 	}
 }
 
+//角色更新
 void playerUpdate(gameObject* self)
 {
 	gameObject* player = mainGame->getScene()->getGameObject("player");
@@ -77,39 +79,48 @@ void playerUpdate(gameObject* self)
 	jhVector2 currentPos = player->transform.circle->getPosition();
 	if (key == KeyMessage::a)
 	{
+		if(currentPos.x>0)
 		player->transform.circle->move(jhVector2(-5, 0) + currentPos);
 	}
 	if (key == KeyMessage::d)
 	{
+		if(currentPos.x < 800)
 		player->transform.circle->move(jhVector2(5, 0) + currentPos);
 	}
 	if (key == KeyMessage::w)
 	{
+		if(currentPos.y>0)
 		player->transform.circle->move(jhVector2(0, -5) + currentPos);
 	}
 	if (key == KeyMessage::s)
 	{
+		if (currentPos.y<600)
 		player->transform.circle->move(jhVector2(0, 5) + currentPos);
 	}
 	if (key == KeyMessage::space)
 	{
-		gameObject* bullet = new gameObject(new jhObject2D::circle(15, jhVector2(currentPos - jhVector2(-8, 60))), ".\\res\\bullet1.png", 10, 10, true);
-		//产生随机名字
-		srand(time(NULL));
-		string name = "Pbullet" + to_string(rand());
-		while (mainGame->getScene()->getGameObject(name) != NULL)
+		static clock_t time1 = clock();
+		if (clock() - time1 > 300)
 		{
-			srand(time(NULL) * rand());
-			name = "Pbullet" + to_string(rand());
+			gameObject* bullet = new gameObject(new jhObject2D::circle(15, jhVector2(currentPos - jhVector2(-8, 60))), ".\\res\\bullet1.png", 10, 10, true);
+			//产生随机名字
+			srand(time(NULL));
+			string name = "Pbullet" + to_string(rand());
+			while (mainGame->getScene()->getGameObject(name) != NULL)
+			{
+				srand(time(NULL) * rand());
+				name = "Pbullet" + to_string(rand());
+			}
+			bullet->setOnCollision(onTriggleEnter_Pbullet);
+			bullet->tag = jhString("Pbullet");
+			mainGame->getScene()->addGameObject(name, bullet);
+			bullet->setGameLoopFunc(PbulletUpdate);
+			time1 = clock();
 		}
-		bullet->setOnCollision(onTriggleEnter_Pbullet);
-		bullet->tag = jhString("Pbullet");
-		mainGame->getScene()->addGameObject(name, bullet);
-		bullet->setGameLoopFunc(PbulletUpdate);
 	}
 
 }
-
+//玩家子弹更新
 void PbulletUpdate(gameObject* self)
 {
 	gameObject* bullet = self;
@@ -119,22 +130,23 @@ void PbulletUpdate(gameObject* self)
 		mainGame->getScene()->removeGameObject(mainGame->getScene()->getName(bullet));
 	}
 }
-
-void onTriggleEnter_Pbullet(gameObject* other)
+//玩家子弹碰撞
+void onTriggleEnter_Pbullet(gameObject* self, gameObject* other)
 {
 	if (other->tag == jhString("enemy"))
 	{
 		mainGame->getScene()->removeGameObject(mainGame->getScene()->getName(other));
+		mainGame->getScene()->removeGameObject(mainGame->getScene()->getName(self));
 		createEnemy();
 		score += 10;
 	}
 }
-
+//敌人更新
 void enemyUpdate(gameObject* self)
 {
 	gameObject* enemy = self;
 	gameObject* player = mainGame->getScene()->getGameObject("player");
-	if(player==NULL)
+	if (player == NULL)
 	{
 		return;
 	}
@@ -153,7 +165,7 @@ void enemyUpdate(gameObject* self)
 		static int time1 = clock();
 		if (clock() - time1 > 800)
 		{
-			gameObject* bullet = new gameObject(new jhObject2D::circle(15, jhVector2(EcurrentPos + jhVector2(0, 60))), ".\\res\\bullet2.png", 10, 10, true);
+			gameObject* bullet = new gameObject(new jhObject2D::circle(15, jhVector2(EcurrentPos + jhVector2(0, 60))), ".\\res\\bullet2.png", 14, 14, true);
 			//产生随机名字
 			srand(time(NULL) * rand());
 			string name = "Ebullet" + to_string(rand());
@@ -171,7 +183,7 @@ void enemyUpdate(gameObject* self)
 	}
 
 }
-
+//敌人子弹更新
 void EbulletUpdate(gameObject* self)
 {
 	gameObject* bullet = self;
@@ -181,12 +193,13 @@ void EbulletUpdate(gameObject* self)
 		mainGame->getScene()->removeGameObject(mainGame->getScene()->getName(bullet));
 	}
 }
-
-void onTriggleEnter_Ebullet(gameObject* other)
+//敌人子弹碰撞
+void onTriggleEnter_Ebullet(gameObject* self, gameObject* other)
 {
 	if (other->tag == jhString("player"))
 	{
-		score-= 10;
+		score -= 10;
+		mainGame->getScene()->removeGameObject(mainGame->getScene()->getName(self));
 		mainGame->getScene()->removeGameObject(mainGame->getScene()->getName(other));
 		playerRevive();
 	}
