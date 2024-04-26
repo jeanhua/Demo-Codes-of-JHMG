@@ -1,6 +1,7 @@
 #include "JHMG engine.h"
 
 Game* mainGame;
+gameSound* bgm;
 void sceneAwake();
 void playerUpdate(gameObject* self);
 void playerRevive();
@@ -41,9 +42,10 @@ void sceneAwake()
 	mainGame->getScene()->addGameUIText("score", scoreText);
 	mainGame->getScene()->setGameLoopFunc(sceneUpdate);
 	//生成背景音乐
-	mainGame->Sound.setSound(".\\res\\bgm.mp3");
-	mainGame->Sound.play(1);
-	mainGame->Sound.setVolume(100);
+	bgm = new gameSound;
+	bgm->open("bgm", ".\\res\\bgm.mp3");
+	bgm->play(1);
+	bgm->setVolume(100);
 }
 
 //生成敌人
