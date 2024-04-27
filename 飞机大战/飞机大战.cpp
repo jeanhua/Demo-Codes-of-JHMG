@@ -2,6 +2,7 @@
 
 Game* mainGame;
 gameSound* bgm;
+gameSound* hit;
 void sceneAwake();
 void playerUpdate(gameObject* self);
 void playerRevive();
@@ -46,6 +47,10 @@ void sceneAwake()
 	bgm->open("bgm", ".\\res\\bgm.mp3");
 	bgm->play(1);
 	bgm->setVolume(100);
+	//生成碰撞音效
+	hit = new gameSound;
+	hit->open("hit", ".\\res\\bom.mp3");
+	hit->setVolume(500);
 }
 
 //生成敌人
@@ -139,6 +144,7 @@ void onTriggleEnter_Pbullet(gameObject* self, gameObject* other)
 	{
 		mainGame->getScene()->removeGameObject(mainGame->getScene()->getName(other));
 		mainGame->getScene()->removeGameObject(mainGame->getScene()->getName(self));
+		hit->play(0);
 		createEnemy();
 		score += 10;
 	}
@@ -203,6 +209,7 @@ void onTriggleEnter_Ebullet(gameObject* self, gameObject* other)
 		score -= 10;
 		mainGame->getScene()->removeGameObject(mainGame->getScene()->getName(self));
 		mainGame->getScene()->removeGameObject(mainGame->getScene()->getName(other));
+		hit->play(0);
 		playerRevive();
 	}
 }
